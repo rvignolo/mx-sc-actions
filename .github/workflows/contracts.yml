@@ -23,6 +23,11 @@ on:
         default: ''
         required: false
         type: string
+      disable-reports:
+        description: 'disable report generation'
+        default: false
+        required: false
+        type: boolean
     secrets:
       token:
         description: 'Github token'
@@ -53,6 +58,9 @@ jobs:
           erdpy deps install nodejs
           erdpy deps install wasm-opt
 
+      - name: Install twiggy
+        if: ${{ !github.event.inputs.disable-reports }}
+        run: |
           cargo install twiggy
 
       - name: Build the wasm contracts
@@ -62,9 +70,11 @@ jobs:
         run: cargo test --features elrond-wasm-debug/mandos-go-tests
 
       - name: Generate the contract report
+        if: ${{ !github.event.inputs.disable-reports }}
         run: erdpy contract report --skip-build --output-format json --output-file report.json
 
       - name: Upload the report json
+        if: ${{ !github.event.inputs.disable-reports }}
         uses: actions/upload-artifact@v3
         with:
           name: report
@@ -72,7 +82,7 @@ jobs:
 
       - name: Download the base report
         uses: dawidd6/action-download-artifact@v2
-        if: github.event_name == 'pull_request'
+        if: ${{ !github.event.inputs.disable-reports && github.event_name == 'pull_request' }}
         continue-on-error: true
         with:
           workflow: actions.yml
@@ -81,7 +91,7 @@ jobs:
           path: base-report
 
       - name: Generate the report template
-        if: github.event_name == 'pull_request'
+        if: ${{ !github.event.inputs.disable-reports && github.event_name == 'pull_request' }}
         run: |
           echo "Contract comparison - from {{ .base }} to {{ .head }}" > report.md
           if [ ! -f base-report/report.json ]
@@ -96,7 +106,7 @@ jobs:
       - name: Render the report from the template
         id: template
         uses: chuhlomin/render-template@v1.2
-        if: github.event_name == 'pull_request'
+        if: ${{ !github.event.inputs.disable-reports && github.event_name == 'pull_request' }}
         with:
           template: report.md
           vars: |
@@ -105,7 +115,7 @@ jobs:
 
       - name: Upload the report markdown
         uses: actions/upload-artifact@v3
-        if: github.event_name == 'pull_request'
+        if: ${{ !github.event.inputs.disable-reports && github.event_name == 'pull_request' }}
         with:
           name: report-markdown
           path: report.md
@@ -113,7 +123,7 @@ jobs:
       - name: Find the comment containing the report
         id: fc
         uses: peter-evans/find-comment@v1
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        if: ${{ !github.event.inputs.disable-reports && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-author: 'github-actions[bot]'
@@ -121,7 +131,7 @@ jobs:
 
       - name: Create or update the report comment
         uses: peter-evans/create-or-update-comment@v1
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        if: ${{ !github.event.inputs.disable-reports && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
