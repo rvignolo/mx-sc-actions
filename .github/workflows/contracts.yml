@@ -212,6 +212,9 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.ssh-private-key }}
 
+      - name: Clone submodules
+        run: git submodule update --init --recursive --remote
+
       - name: Install rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -278,6 +281,9 @@ jobs:
         if: inputs.has-private-dependencies
         with:
           ssh-private-key: ${{ secrets.ssh-private-key }}
+
+      - name: Clone submodules
+        run: git submodule update --init --recursive --remote
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
