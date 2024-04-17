@@ -86,6 +86,9 @@ jobs:
           fetch-depth: 0
           repository: ${{ env.GITHUB_REPOSITORY }}
 
+      - name: Clone submodules
+        run: git submodule update --init --recursive --remote
+
       - name: Preliminary checks
         if: ${{ inputs.skip_preliminary_checks == false }}
         run: |
